@@ -4,10 +4,7 @@ Version:    0.0.2
 Release:    1
 Group:      System/Boot
 License:    GPLv2
-Source0:    init
-Source1:    LICENSE
-Source2:    README
-Source3:    root-mount
+Source0:    %{name}-%{version}.tar.gz
 
 BuildRequires:  findutils
 BuildRequires:  gzip
