@@ -1,0 +1,23 @@
+This init ramdisk is created in order to boot Mer.
+
+This ramdisk can be used by either flashing or loading the kernel and ramdisk
+to the device memory with following command:
+
+Load:
+$ fastboot boot <kernel_zImage> hw-ramdisk.gz
+
+Flash (NOTE: Be sure you have backups of your kernel and ramdiskd before doing this):
+$ fastboot flash:raw boot <kernel_zImage> hw-ramdisk.gz
+
+Combine with kernel:
+$ mkbootimg --kernel arch/arm/boot/zImage --ramdisk /boot/hw-ramdisk.gz --cmdline "<your kernel command line>" --base 0x80200000 --offset 0x02000000 --pagesize 2048 -o boot.img
+
+
+You can change what is mounted as root by the initrd by editing the init script
+and changing $MNTSCRIPT to point to your own device specific root mount script.
+
+The hw-ramdisk.gz is installed into /boot/hw-ramdisk.gz and you can use it
+as base in kernel packaging. Just add a "BuildRequires: hw-ramdisk" to
+make it available and then add to it to make the final combined kernel +
+initrd image (or if needed, final separate initrd).
+
