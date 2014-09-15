@@ -25,13 +25,11 @@
 # Location of the device init script, if not set, few defaults are tried.
 INITBIN=/sbin/preinit
 
+# What to mount as rootfs
+ROOTDEV="/dev/mmcblk1p1"
+
 # Where to mount the rootfs
 ROOTMNTDIR="/rootfs"
-
-# With MNTSCRIPT, you can use your own mounting script and bypass the default
-# root mounting. The script should take $ROOTMNTDIR as parameter
-# for where to mount the root.
-MNTSCRIPT="/sbin/root-mount"
 
 fail() {
     echo "Failed"
@@ -40,27 +38,16 @@ fail() {
 }
 
 echo "Starting ramdisk.."
-mkdir -p /proc
-mount -t proc proc /proc
-
-mkdir -p /sys
-mount -t sysfs sys /sys
-
-mkdir -p /dev
-mount -t devtmpfs devtmpfs /dev
+mount -a
 
 mkdir -p $ROOTMNTDIR
 
 # Mount the root filesystem
-if [ -e $MNTSCRIPT ]; then
-	$MNTSCRIPT $ROOTMNTDIR
-	if [ $? -eq 0 ]; then
-		echo "Mounting root succeeded"
-	else
-		fail "Mouting root failed"
-	fi
+mount $ROOTDEV $ROOTMNTDIR
+if [ $? -eq 0 ]; then
+	echo "Mounting root succeeded"
 else
-	fail "$MNTSCRIPT does not exist, cannot mount root!"
+	fail "Mouting root failed"
 fi
 
 echo "Searching for init process..."
@@ -79,9 +66,7 @@ fi
 
 # umount everything before doing switch root as the init process
 # is responsible of doing these inside the final boot env.
-umount -l /dev
-umount -l /sys
-umount -l /proc
+umount -a
 
 echo "Switching to rootfs at ${ROOTMNTDIR}, with init ${INITBIN}"
 
