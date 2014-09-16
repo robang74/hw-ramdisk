@@ -9,7 +9,7 @@ Source0:    %{name}-%{version}.tar.gz
 BuildRequires:  findutils
 BuildRequires:  gzip
 BuildRequires:  cpio
-BuildRequires:  busybox-static
+Requires:  busybox-static
 
 
 %description
