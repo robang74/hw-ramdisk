@@ -1,4 +1,35 @@
-This init ramdisk is created in order to boot Mer.
+These ramdisk tools can be used to create init ramdisk for booting Mer.
+
+Use the script initialize-ramdisk.sh to generate files for the ramdisk and
+to add any needed files for your own ramdisk setup.
+
+Usage: initialize-ramdisk.sh -w <work-dir> [-t <tools-to-be-added>] [-i <custom-init>]
+
+Example:
+initialize-ramdisk.sh -w ./ -t "/usr/sbin/btrfs sbin/myscript" -i myinit
+
+Please note that in above example the myscript is added from local ./sbin/
+folder, while btrfs is taken from scratchbox target's /usr/sbin/ folder. The
+tool will get installed in same folder structure on initrd, as it's given
+to the script, so you have to create in your work dir the folder structure you
+want for local tools.
+
+Once you have run the initialization script run moslo-build.sh.
+
+Usage: moslo-build.sh -w <build-dir> -m <modules-dir> -v <software version> [-t <tar-archive-name>] [-a <module-names>]
+
+Example:
+moslo-build.sh -w ./ -m /lib/modules/3.4.98.20140902.1 -v 1.0 -a "g_mass_storage wlan sunrpc"
+
+You will get a rootfs.cpio.gz file which contains your rootfs. It has the tools
+you passed in initialization (with needed libraries), and kernel modules
+you picked with the -a option.
+
+The last phase is to combine the rootfs with kernel zImage. Like this for
+example:
+
+$ mkbootimg --kernel arch/arm/boot/zImage --ramdisk /boot/rootfs.cpio.gz --cmdline "<your kernel command line>" --base 0x80200000 --offset 0x02000000 --pagesize 2048 -o boot.img
+
 
 This ramdisk can be used by either flashing or loading the kernel and ramdisk
 to the device memory with following command:
@@ -8,16 +39,4 @@ $ fastboot boot <kernel_zImage> hw-ramdisk.gz
 
 Flash (NOTE: Be sure you have backups of your kernel and ramdiskd before doing this):
 $ fastboot flash:raw boot <kernel_zImage> hw-ramdisk.gz
-
-Combine with kernel:
-$ mkbootimg --kernel arch/arm/boot/zImage --ramdisk /boot/hw-ramdisk.gz --cmdline "<your kernel command line>" --base 0x80200000 --offset 0x02000000 --pagesize 2048 -o boot.img
-
-
-You can change what is mounted as root by the initrd by editing the init script
-and changing $MNTSCRIPT to point to your own device specific root mount script.
-
-The hw-ramdisk.gz is installed into /boot/hw-ramdisk.gz and you can use it
-as base in kernel packaging. Just add a "BuildRequires: hw-ramdisk" to
-make it available and then add to it to make the final combined kernel +
-initrd image (or if needed, final separate initrd).
 
