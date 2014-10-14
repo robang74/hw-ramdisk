@@ -6,7 +6,7 @@ include initfs/tools/Makefile
 
 initfs.tar.bz2: tools
 	tar -cjf initfs.tar.bz2 initfs/skeleton/ sbin/evkey \
-		 sbin/reboot2 initfs/tools/gen_init_cpio
+		 sbin/reboot2 sbin/rtc-clear initfs/tools/gen_init_cpio
 
 all: initfs.tar.bz2
 
