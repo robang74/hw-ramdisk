@@ -347,7 +347,7 @@ fi
 
 gen_initramfs_list.sh -o $WORK_DIR/rootfs.cpio \
     -u squash -g squash $ROOT_DIR
-gzip  $WORK_DIR/rootfs.cpio
+gzip -f  $WORK_DIR/rootfs.cpio
 
 echo Build is ready at $WORK_DIR/rootfs.cpio.gz
 
