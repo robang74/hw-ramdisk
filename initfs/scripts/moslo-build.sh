@@ -193,17 +193,19 @@ KERNEL_MOD_DEP=$KERNEL_MOD_DIR/modules.dep
 UTIL_LIST=$BUILD_SRC/util-list
 DIR_LIST=$BUILD_SRC/dir-list
 
-[ -d "$KERNEL_MOD_DIR" ] || {
-        echo Cannot find kernel modules directory $KERNEL_MOD_DIR
-        exit 1
-}
+if [ ! -z "$KERNEL_MOD_DIR" ]; then
 
-( [ -h "$KERNEL_MOD_DIR" ] && {
-        KERNEL_MOD_DIR_NAME=$(basename $(readlink $KERNEL_MOD_DIR))
-} ) || {
-        KERNEL_MOD_DIR_NAME=$(basename $KERNEL_MOD_DIR)
-}
+        [ -d "$KERNEL_MOD_DIR" ] || {
+                echo Cannot find kernel modules directory $KERNEL_MOD_DIR
+                exit 1
+        }
 
+        ( [ -h "$KERNEL_MOD_DIR" ] && {
+                KERNEL_MOD_DIR_NAME=$(basename $(readlink $KERNEL_MOD_DIR))
+        } ) || {
+                KERNEL_MOD_DIR_NAME=$(basename $KERNEL_MOD_DIR)
+        }
+fi
 
 rm -rf $ROOT_DIR $WORK_DIR/rootfs.cpio
 
@@ -281,57 +283,60 @@ done
 #
 # install kernel modules
 #
-echo
-echo "Installing Kernel modules"
 
-TMPFILE=$(mktemp /tmp/build-tmp-XXXXXX) || exit 1
+if [ ! -z "$KERNEL_MOD_DIR_NAME" ]; then
+        echo
+        echo "Installing Kernel modules"
 
-TARGET_KERNEL_MOD_DIR=$ROOT_DIR/lib/modules/$KERNEL_MOD_DIR_NAME
+        TMPFILE=$(mktemp /tmp/build-tmp-XXXXXX) || exit 1
 
-mkdir -p $TARGET_KERNEL_MOD_DIR
+        TARGET_KERNEL_MOD_DIR=$ROOT_DIR/lib/modules/$KERNEL_MOD_DIR_NAME
 
-[ -a $KERNEL_MOD_DEP ] && {
-        cp -p $KERNEL_MOD_DEP $TARGET_KERNEL_MOD_DIR/
-} || {
-    KERNEL_MOD_DEP="$TARGET_KERNEL_MOD_DIR/modules.dep"
-    depmod -an $KERNEL_VERSION > $KERNEL_MOD_DEP
-}
-{
-        for i in $KERNEL_MODS ; do \
-                KERNEL_MOD=$(sed -n "s/\(.*$i.ko\)\(:.*\)/\1/p" < \
-                $KERNEL_MOD_DEP)
-        [ -n "$KERNEL_MOD" ] && {
-                echo $KERNEL_MOD >> $TMPFILE
+        mkdir -p $TARGET_KERNEL_MOD_DIR
+
+        [ -a $KERNEL_MOD_DEP ] && {
+                cp -p $KERNEL_MOD_DEP $TARGET_KERNEL_MOD_DIR/
+        } || {
+            KERNEL_MOD_DEP="$TARGET_KERNEL_MOD_DIR/modules.dep"
+            depmod -an $KERNEL_VERSION > $KERNEL_MOD_DEP
         }
-        done
-        LOOP=1
+        {
+                for i in $KERNEL_MODS ; do \
+                        KERNEL_MOD=$(sed -n "s/\(.*$i.ko\)\(:.*\)/\1/p" < \
+                        $KERNEL_MOD_DEP)
+                [ -n "$KERNEL_MOD" ] && {
+                        echo $KERNEL_MOD >> $TMPFILE
+                }
+                done
+                LOOP=1
 
-        while [ "$LOOP" -eq "1" ] ; do
-        LOOP=0
-        CHECK=$(cat $TMPFILE | sort | uniq)
-        for d in $CHECK ; do
-        AUX_MOD=$(sed -n "s/^$(echo $d | sed 's:/:\\/:g'): //p" \
-            < $KERNEL_MOD_DEP)
-        [ -z "$AUX_MOD" ] || {
-                for m in $AUX_MOD ; do
-                        grep $m $TMPFILE > /dev/null
-                        [ "$?" -eq "1" ] && {
-                        echo $m >> $TMPFILE
-                        LOOP=1
+                while [ "$LOOP" -eq "1" ] ; do
+                LOOP=0
+                CHECK=$(cat $TMPFILE | sort | uniq)
+                for d in $CHECK ; do
+                AUX_MOD=$(sed -n "s/^$(echo $d | sed 's:/:\\/:g'): //p" \
+                    < $KERNEL_MOD_DEP)
+                [ -z "$AUX_MOD" ] || {
+                        for m in $AUX_MOD ; do
+                                grep $m $TMPFILE > /dev/null
+                                [ "$?" -eq "1" ] && {
+                                echo $m >> $TMPFILE
+                                LOOP=1
+                                }
+                        done
                         }
                 done
-                }
-        done
-        done
+                done
 
-        MODULES=$(cat $TMPFILE)
-        for m in $MODULES ; do
-                BASENAME_TMP=$(basename $m)
-                TEMP_MOD_DIR=$(echo $m | sed "s/$BASENAME_TMP//")
-                install -d $TARGET_KERNEL_MOD_DIR/$TEMP_MOD_DIR
-                cp -p $KERNEL_MOD_DIR/$m $TARGET_KERNEL_MOD_DIR/$TEMP_MOD_DIR
-        done
-}
+                MODULES=$(cat $TMPFILE)
+                for m in $MODULES ; do
+                        BASENAME_TMP=$(basename $m)
+                        TEMP_MOD_DIR=$(echo $m | sed "s/$BASENAME_TMP//")
+                        install -d $TARGET_KERNEL_MOD_DIR/$TEMP_MOD_DIR
+                        cp -p $KERNEL_MOD_DIR/$m $TARGET_KERNEL_MOD_DIR/$TEMP_MOD_DIR
+                done
+        }
+fi
 
 #
 # create tar of rootfs
@@ -347,7 +352,7 @@ fi
 
 gen_initramfs_list.sh -o $WORK_DIR/rootfs.cpio \
     -u squash -g squash $ROOT_DIR
-gzip  $WORK_DIR/rootfs.cpio
+gzip -f  $WORK_DIR/rootfs.cpio
 
 echo Build is ready at $WORK_DIR/rootfs.cpio.gz
 
