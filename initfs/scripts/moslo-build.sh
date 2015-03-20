@@ -58,6 +58,35 @@ debug()
         fi
 }
 
+LIB_PATHS="/usr/lib /lib"
+
+# Function to find _direct_ lib dependencies for executable using objdump
+objdump_find_lib_path()
+{
+        local FOUND_LIBS=""
+        local LIB_LIST=""
+        local FOUND_LIB=""
+
+        if test -z $1; then
+                echo "find_lib_path: Error: Empty executable name!"
+                exit 1
+        fi
+        LIB_LIST=$(objdump -p "$1" | grep NEEDED | sed -e 's/\NEEDED//g')
+        for lib in $LIB_LIST; do
+                for path in $LIB_PATHS; do
+                        # NOTE: objdump -p gives only symlink names of the libs,
+                        # hence we pick BOTH symlink and actual lib names with
+                        # this grep as both are needed in the initrd.
+                        FOUND_LIB=$(find $path/ | grep $lib)
+                        if test $? -eq "0" ; then
+                                FOUND_LIBS="$FOUND_LIBS $FOUND_LIB"
+                                break
+                        fi
+                done
+        done
+        echo "$FOUND_LIBS"
+}
+
 add_dependencies()
 {
         local INPUT_FILE=$1
@@ -108,16 +137,25 @@ add_dependencies()
                 fi
 
                 #Use ld-linux for libraries
+                LD_LINUX=$LD
+
                 $($LD --verify $i)
                 if [ "$?" -ne "2" ] ; then
-                        LD_LINUX=""
+                        #Get direct dependencies
+                        DIRECT_LIBS=$(objdump_find_lib_path $i)
+                        DEP="$DIRECT_LIBS"
+                        LD_LINUX="ldd"
+                        #Get full dependencies of the direct dependencies
+                        for lib in $DIRECT_LIBS; do
+                                TEMPDEPS=$($LD_LINUX $lib \
+                                        | sed -ne "s/.*[\t ]\(\/.*\) (.*/\1/gp")
+                                DEP="$DEP $TEMPDEPS"
+                        done
                 else
-                        LD_LINUX=$LD
+                        #Get dependencies
+                        DEP=$($LD_LINUX $i \
+                                | sed -ne "s/.*[\t ]\(\/.*\) (.*/\1/gp")
                 fi
-
-                #Get dependencies
-                DEP=$(LD_TRACE_LOADED_OBJECTS=1 $LD_LINUX $i \
-                        | sed -ne "s/.*[\t ]\(\/.*\) (.*/\1/gp")
 
                 debug "Dependencies:"
                 if [ "$DEBUG" -eq "1" ] ; then
