@@ -60,17 +60,43 @@ debug()
 
 LIB_PATHS="/usr/lib /lib"
 
-# Function to find _direct_ lib dependencies for executable using objdump
-objdump_find_lib_path()
+# Recursive function to find all lib dependencies for a binary using objdump
+# $1 path of library / executable to search deps for
+# $2 temporary search file to store intermediate results, rm -f after call.
+objdump_find_lib_paths()
 {
-        local FOUND_LIBS=""
+        local RECURSED_LIBS=""
         local LIB_LIST=""
         local FOUND_LIB=""
+        local FOUND_LIBS=""
 
         if test -z $1; then
-                echo "find_lib_path: Error: Empty executable name!"
+                echo "$0: Error: Empty executable name!" 1>&2
                 exit 1
         fi
+
+        if ! test -f $2; then
+                echo "$0: Error: No temporary list file provided!" 1>&2
+                exit 1
+        fi
+
+        if cat $2 | grep -w $1; then
+                # This library is already in the list, skipping.
+                return
+        else
+                # Clean up temp file from duplicates
+                SORTED_FILE=$(cat $2 | sort -u)
+                echo $SORTED_FILE > $2
+                # Add the given lib / binary to list file
+                echo $1 >> $2
+        fi
+
+        if [ $DEBUG -eq 1 ] ; then
+                echo "DEBUG: resolving $1, FILE LIST:" 1>&2
+                cat $2 1>&2
+                echo "***************************************" 1>&2
+        fi
+
         LIB_LIST=$(objdump -p "$1" | grep NEEDED | sed -e 's/\NEEDED//g')
         for lib in $LIB_LIST; do
                 for path in $LIB_PATHS; do
@@ -84,6 +110,20 @@ objdump_find_lib_path()
                         fi
                 done
         done
+
+        RECURSED_LIBS="$FOUND_LIBS"
+
+        for recursed_lib in $RECURSED_LIBS; do
+                if cat $2 | grep -w $recursed_lib; then
+                        continue
+                else
+                        FOUND_LIBS="$FOUND_LIBS $(objdump_find_lib_paths $recursed_lib $2)"
+                fi
+        done
+
+        # Sort out duplicates to reduce amount of recursion.
+        FOUND_LIBS=$(echo $FOUND_LIBS | sed -e "s/ /\n/g" | sort -u)
+
         echo "$FOUND_LIBS"
 }
 
@@ -94,6 +134,7 @@ add_dependencies()
 
         local CHECK=$(cat $INPUT_FILE | sort | uniq)
         local DEP_FILE=$(mktemp -t ldout.XXXX)
+        local SEARCH_FILE=$(mktemp -t objdump-out.XXXX)
         local LIBC=$(find /lib/ -name "libc.*")
         local LD=""
         local LD_LINUX=""
@@ -141,19 +182,11 @@ add_dependencies()
 
                 $($LD --verify $i)
                 if [ "$?" -ne "2" ] ; then
-                        #Get direct dependencies
-                        DIRECT_LIBS=$(objdump_find_lib_path $i)
-                        DEP="$DIRECT_LIBS"
-                        LD_LINUX="ldd"
-                        #Get full dependencies of the direct dependencies
-                        for lib in $DIRECT_LIBS; do
-                                TEMPDEPS=$($LD_LINUX $lib \
-                                        | sed -ne "s/.*[\t ]\(\/.*\) (.*/\1/gp")
-                                DEP="$DEP $TEMPDEPS"
-                        done
+                         # Get all dependencies via recursive objdump parsing
+                         DEP=$(objdump_find_lib_paths $i $SEARCH_FILE)
                 else
-                        #Get dependencies
-                        DEP=$($LD_LINUX $i \
+                        # Get dependencies with running the app / loading lib
+                        DEP=$(LD_TRACE_LOADED_OBJECTS=1 $LD_LINUX $i \
                                 | sed -ne "s/.*[\t ]\(\/.*\) (.*/\1/gp")
                 fi
 
@@ -168,6 +201,7 @@ add_dependencies()
         #Add input file content and their dependencies to output file
         cat $DEP_FILE $INPUT_FILE | sort | uniq > $OUTPUT_FILE
         rm -f $DEP_FILE
+        rm -f $SEARCH_FILE
 }
 
 #
