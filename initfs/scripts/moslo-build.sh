@@ -58,8 +58,6 @@ debug()
         fi
 }
 
-LIB_PATHS="/usr/lib /lib"
-
 # Recursive function to find all lib dependencies for a binary using objdump
 # $1 path of library / executable to search deps for
 # $2 temporary search file to store intermediate results, rm -f after call.
@@ -99,16 +97,14 @@ objdump_find_lib_paths()
 
         LIB_LIST=$(objdump -p "$1" | grep NEEDED | sed -e 's/\NEEDED//g')
         for lib in $LIB_LIST; do
-                for path in $LIB_PATHS; do
-                        # NOTE: objdump -p gives only symlink names of the libs,
-                        # hence we pick BOTH symlink and actual lib names with
-                        # this grep as both are needed in the initrd.
-                        FOUND_LIB=$(find $path/ | grep $lib)
-                        if test $? -eq "0" ; then
-                                FOUND_LIBS="$FOUND_LIBS $FOUND_LIB"
-                                break
-                        fi
-                done
+                # Get the library path from ldconfig's library cache list
+                FOUND_LIB=$(ldconfig -p | grep $lib | cut -d ">" -f 2)
+                if test $? -eq "0" ; then
+                        FOUND_LIBS="$FOUND_LIBS $FOUND_LIB"
+                else
+                        echo "Error: Could not find $lib from ldconfig -p" 1>&2
+                        exit 1
+                fi
         done
 
         RECURSED_LIBS="$FOUND_LIBS"
