@@ -245,6 +245,9 @@ echo
         exit 1
 }
 
+# Make sure sbin is in path in the build env.
+export PATH="/sbin:$PATH"
+
 #
 # check and cleanup
 #
