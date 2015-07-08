@@ -58,6 +58,22 @@ debug()
         fi
 }
 
+raw_find_libpath()
+{
+        if test -z "$1"; then
+                echo "$0: Error: Empty library name!" 1>&2
+                exit 1
+        fi
+
+        for path in /usr/lib /lib; do
+                if find $path | grep -q -m 1 "$1"; then
+                        echo $path/$1
+                        return 0
+                fi
+        done
+        return 1
+}
+
 # Recursive function to find all lib dependencies for a binary using objdump
 # $1 path of library / executable to search deps for
 # $2 temporary search file to store intermediate results, rm -f after call.
@@ -99,12 +115,15 @@ objdump_find_lib_paths()
         for lib in $LIB_LIST; do
                 # Get the library path from ldconfig's library cache list
                 FOUND_LIB=$(ldconfig -p | grep $lib | cut -d ">" -f 2)
-                if test $? -eq "0" ; then
-                        FOUND_LIBS="$FOUND_LIBS $FOUND_LIB"
-                else
-                        echo "Error: Could not find $lib from ldconfig -p" 1>&2
-                        exit 1
+                if test -z "$FOUND_LIB"; then
+                        # Fall back to find | grep based raw search
+                        FOUND_LIB=$(raw_find_libpath $lib)
+                        if test -z "$FOUND_LIB"; then
+                                echo "Error: Could not find $lib from ldconfig -p" 1>&2
+                                exit 1
+                        fi
                 fi
+                FOUND_LIBS="$FOUND_LIBS $FOUND_LIB"
         done
 
         RECURSED_LIBS="$FOUND_LIBS"
