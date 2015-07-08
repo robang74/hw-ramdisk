@@ -132,20 +132,7 @@ add_dependencies()
         local DEP_FILE=$(mktemp -t ldout.XXXX)
         local SEARCH_FILE=$(mktemp -t objdump-out.XXXX)
         local LIBC=$(find /lib/ -name "libc.*")
-        local LD=""
-        local LD_LINUX=""
         local DEP=""
-
-        #Get correct ld-linux
-        for ld in /lib/ld-linux* ; do
-                if [ -x $ld ]; then
-                        $ld --verify $LIBC
-                        if [ $? -eq 0 ] ; then
-                                LD=$ld
-                                break
-                        fi
-                fi
-        done
 
         #Loop through all files in input list
         for i in $CHECK ; do
@@ -173,18 +160,7 @@ add_dependencies()
                         debug "Is dynamically linked file!"
                 fi
 
-                #Use ld-linux for libraries
-                LD_LINUX=$LD
-
-                $($LD --verify $i)
-                if [ "$?" -ne "2" ] ; then
-                         # Get all dependencies via recursive objdump parsing
-                         DEP=$(objdump_find_lib_paths $i $SEARCH_FILE)
-                else
-                        # Get dependencies with running the app / loading lib
-                        DEP=$(LD_TRACE_LOADED_OBJECTS=1 $LD_LINUX $i \
-                                | sed -ne "s/.*[\t ]\(\/.*\) (.*/\1/gp")
-                fi
+                DEP=$(objdump_find_lib_paths $i $SEARCH_FILE)
 
                 debug "Dependencies:"
                 if [ "$DEBUG" -eq "1" ] ; then
