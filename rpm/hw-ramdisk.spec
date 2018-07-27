@@ -1,6 +1,6 @@
 Name:       hw-ramdisk
 Summary:    Ramdisk for booting root
-Version:    1.0.7
+Version:    1.1.2
 Release:    1
 Group:      System/Boot
 License:    GPLv2
