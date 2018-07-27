@@ -28,6 +28,7 @@ make
 
 %files
 %defattr(-,root,root,-)
-%{_sbindir}/*.sh
+%{_sbindir}/*
+%{_bindir}/*
 %dir %{_datadir}/hw-ramdisk
 %{_datadir}/hw-ramdisk/initfs.tar.bz2
