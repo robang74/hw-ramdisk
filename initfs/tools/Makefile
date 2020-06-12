@@ -12,7 +12,7 @@ install_util:
 	install -m 755 $(TOOLS_PATH)/rtc-clear ./sbin
 
 gen_init_cpio: $(TOOLS_PATH)/gen_init_cpio.c
-	gcc -Wall -O2 $(TOOLS_PATH)/gen_init_cpio.c -o $(TOOLS_PATH)/gen_init_cpio -Wl,--no-as-needed
+	gcc -Wall -O2 -D_FILE_OFFSET_BITS=64 $(TOOLS_PATH)/gen_init_cpio.c -o $(TOOLS_PATH)/gen_init_cpio -Wl,--no-as-needed
 
 reboot2: $(TOOLS_PATH)/reboot2.c
 	gcc -Wall -O2 $(TOOLS_PATH)/reboot2.c -o $(TOOLS_PATH)/reboot2 -Wl,--no-as-needed
