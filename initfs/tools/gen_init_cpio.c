@@ -102,7 +102,6 @@ static int cpio_mkslink(const char *name, const char *target,
 			 unsigned int mode, uid_t uid, gid_t gid)
 {
 	char s[256];
-	time_t mtime = time(NULL);
 
 	sprintf(s,"%s%08X%08X%08lX%08lX%08X%08lX"
 	       "%08X%08X%08X%08X%08X%08X%08X",
@@ -112,7 +111,7 @@ static int cpio_mkslink(const char *name, const char *target,
 		(long) uid,		/* uid */
 		(long) gid,		/* gid */
 		1,			/* nlink */
-		(long) mtime,		/* mtime */
+		(long) 0,		/* mtime */
 		(unsigned)strlen(target)+1, /* filesize */
 		3,			/* major */
 		1,			/* minor */
@@ -150,7 +149,6 @@ static int cpio_mkgeneric(const char *name, unsigned int mode,
 		       uid_t uid, gid_t gid)
 {
 	char s[256];
-	time_t mtime = time(NULL);
 
 	sprintf(s,"%s%08X%08X%08lX%08lX%08X%08lX"
 	       "%08X%08X%08X%08X%08X%08X%08X",
@@ -160,7 +158,7 @@ static int cpio_mkgeneric(const char *name, unsigned int mode,
 		(long) uid,		/* uid */
 		(long) gid,		/* gid */
 		2,			/* nlink */
-		(long) mtime,		/* mtime */
+		(long) 0,		/* mtime */
 		0,			/* filesize */
 		3,			/* major */
 		1,			/* minor */
@@ -238,7 +236,6 @@ static int cpio_mknod(const char *name, unsigned int mode,
 		       unsigned int maj, unsigned int min)
 {
 	char s[256];
-	time_t mtime = time(NULL);
 
 	if (dev_type == 'b')
 		mode |= S_IFBLK;
@@ -253,7 +250,7 @@ static int cpio_mknod(const char *name, unsigned int mode,
 		(long) uid,		/* uid */
 		(long) gid,		/* gid */
 		1,			/* nlink */
-		(long) mtime,		/* mtime */
+		(long) 0,		/* mtime */
 		0,			/* filesize */
 		3,			/* major */
 		1,			/* minor */
@@ -341,7 +338,7 @@ static int cpio_mkfile(const char *name, const char *location,
 			(long) uid,		/* uid */
 			(long) gid,		/* gid */
 			nlinks,			/* nlink */
-			(long) buf.st_mtime,	/* mtime */
+			(long) 0,		/* mtime */
 			size,			/* filesize */
 			3,			/* major */
 			1,			/* minor */
