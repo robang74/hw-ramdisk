@@ -19,7 +19,7 @@ Requires:  busybox-static
 
 
 %build
-%make_build
+make
 
 %install
 %make_install
