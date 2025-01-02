@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <sys/poll.h>
@@ -83,7 +84,7 @@ keystate()
 
   for (yalv = 0; yalv < KEY_MAX; yalv++)
     {
-      if (test_bit (yalv, key_b))
+      if (test_bit (yalv, (unsigned long *)key_b))
 	{
 	  /* the bit is set in the key state */
 	  printf ("%d\n", yalv);
@@ -104,7 +105,6 @@ main (int argc, char *argv[])
 
   while (1)
     {
-      int this_option_optind = optind ? optind : 1;
       c = getopt (argc, argv, "sdut:h");
       if (c == -1)
 	break;

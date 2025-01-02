@@ -1,5 +1,6 @@
 #include <linux/reboot.h>
 #include <sys/syscall.h>
+#include <unistd.h>
 
 int sys_reboot(const char *cmd)
 {
