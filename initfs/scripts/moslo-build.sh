@@ -19,7 +19,7 @@
 print_usage()
 {
 echo    "Usage: $0 -w <build-dir> -m <modules-dir>" \
-        "-v <software version> [-t <tar-archive-name>] [-a <module-names>]"
+        "-v <software version> [-t <tar-archive-name>] [-a <module-names>] [-l]"
 }
 
 
@@ -200,7 +200,7 @@ add_dependencies()
 #
 echo
 echo "Options:"
-while getopts "w:k:m:v:t:a:" opt; do
+while getopts "w:k:m:v:t:a:l" opt; do
     case $opt in
         w)
             WORK_DIR=$OPTARG
@@ -221,6 +221,10 @@ while getopts "w:k:m:v:t:a:" opt; do
         a)
             USER_MODULES=$OPTARG
             echo "Additional modules: $USER_MODULES"
+            ;;
+        l)
+            USE_LZ4=true
+            echo "Use lz4 compression"
             ;;
         \?)
             print_usage
@@ -418,8 +422,10 @@ fi
 
 gen_initramfs_list.sh -o $WORK_DIR/rootfs.cpio \
     -u squash -g squash $ROOT_DIR
-gzip -f  $WORK_DIR/rootfs.cpio
-
-echo Build is ready at $WORK_DIR/rootfs.cpio.gz
-
-
+if [ ! -z $USE_LZ4 ]; then
+	lz4 -f -l -12 --favor-decSpeed $WORK_DIR/rootfs.cpio $WORK_DIR/rootfs.cpio.lz4
+	echo Build is ready at $WORK_DIR/rootfs.cpio.lz4
+else
+	gzip -f  $WORK_DIR/rootfs.cpio
+	echo Build is ready at $WORK_DIR/rootfs.cpio.gz
+fi

@@ -2,7 +2,6 @@ Name:       hw-ramdisk
 Summary:    Ramdisk for booting root
 Version:    1.1.2
 Release:    1
-Group:      System/Boot
 License:    GPLv2
 Source0:    %{name}-%{version}.tar.gz
 
@@ -16,14 +15,13 @@ Requires:  busybox-static
 %{summary}.
 
 %prep
-%setup -q -n %{name}-%{version}
+%autosetup -n %{name}-%{version}
 
 
 %build
 make
 
 %install
-
 %make_install
 
 %files
